@@ -7,8 +7,8 @@ usgs_bullrun_river,usgs,USGS-14140000,00060,cfs,Bull Run watershed,overlay,Bull 
 usgs_clackamas_estacada,usgs,USGS-14210000,00060,cfs,Regional rivers,overlay,Clackamas at Estacada,TRUE,
 usgs_tualatin_westlinn,usgs,USGS-14207500,00060,cfs,Regional rivers,overlay,Tualatin at West Linn,TRUE,
 usgs_fanno_durham,usgs,USGS-14206950,00060,cfs,Urban streams,overlay,Fanno Creek at Durham,TRUE,
-usgs_bullrun_res1,usgs,,00054,acre-ft,Bull Run watershed,score_storage,Bull Run Reservoir 1 storage,FALSE,Fill site_id from validate script output
-usgs_bullrun_res2,usgs,,00054,acre-ft,Bull Run watershed,score_storage,Bull Run Reservoir 2 storage,FALSE,Fill site_id from validate script output
+usgs_bullrun_res1,usgs,USGS-14139000,62614,ft,Bull Run watershed,score_storage,Bull Run Reservoir 1 elevation,TRUE,Water surface elevation
+usgs_bullrun_res2,usgs,USGS-14139900,62614,ft,Bull Run watershed,score_storage,Bull Run Reservoir 2 elevation,TRUE,Water surface elevation
 nrcs_mthood_swe,nrcs,651:OR:SNTL,WTEQ,in,Snowpack,score_swe,Mt. Hood Test Site SWE,TRUE,
 nrcs_mthood_prcp,nrcs,651:OR:SNTL,PRCP,in,Snowpack,score_precip,Mt. Hood Test Site precip,TRUE,
 nrcs_blazedalder_swe,nrcs,362:OR:SNTL,WTEQ,in,Snowpack,score_swe,Blazed Alder SWE,TRUE,Confirm triplet with validate script
