@@ -1,0 +1,7 @@
+data-store/
+tests/out/
+dashboard/index.html
+dashboard/*_files/
+_site/
+.Rhistory
+.Rproj.user/

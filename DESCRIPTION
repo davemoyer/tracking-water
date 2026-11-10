@@ -1,0 +1,17 @@
+Package: trackingwater
+Title: Portland Regional Hydrology Tracker
+Version: 0.1.0
+Description: Daily pipeline that pulls USGS, NRCS SNOTEL and US Drought Monitor
+    data for the Portland, Oregon region, computes percentiles against 1991-2020
+    normals and a Local Drought Score, and renders a dashboard.
+License: MIT
+Imports:
+    dataRetrieval (>= 2.7.21),
+    httr2,
+    jsonlite,
+    readr,
+    lubridate,
+    ggplot2,
+    scales,
+    knitr,
+    rmarkdown

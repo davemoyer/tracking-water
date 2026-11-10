@@ -1,0 +1,129 @@
+---
+title: "Tracking Water: Portland"
+format:
+  html:
+    embed-resources: true
+    theme: cosmo
+    toc: false
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(ggplot2)
+source("../config/settings.R"); source("../R/utils.R")
+data_dir <- Sys.getenv("DATA_DIR", "../data-store")
+
+gold     <- readr::read_csv(file.path(data_dir, "gold_daily.csv.gz"), show_col_types = FALSE)
+normals  <- readr::read_csv(file.path(data_dir, "normals.csv.gz"), show_col_types = FALSE)
+drought  <- readr::read_csv(file.path(data_dir, "drought_score.csv"), show_col_types = FALSE)
+status   <- readr::read_csv(file.path(data_dir, "status.csv"), show_col_types = FALSE)
+stations <- read.csv("../config/stations.csv", colClasses = "character")
+
+cur_wy <- water_year(max(gold$date))
+cols <- c(current = "#2a78d6", "2015" = "#eb6834", "2021" = "#1baf7a")
+names(cols)[1] <- paste0("WY", cur_wy)
+ink2 <- "#52514e"
+
+theme_tw <- theme_minimal(base_size = 11) +
+  theme(panel.grid.minor = element_blank(), panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "#e6e5e0", linewidth = 0.3),
+        axis.text = element_text(colour = ink2), plot.title.position = "plot",
+        legend.position = "top", legend.justification = "left")
+
+wy_axis <- scale_x_continuous(breaks = c(1, 32, 62, 93, 124, 152, 183, 213, 244, 274, 305, 336),
+  labels = c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"))
+
+wy_axis_q <- scale_x_continuous(breaks = c(1, 93, 183, 274), labels = c("Oct", "Jan", "Apr", "Jul"))
+series_levels <- c(paste0("WY", cur_wy), "2015", "2021")
+
+lab <- function(k) stations$label[match(k, stations$station_key)]
+latest <- function(k) { g <- gold[gold$station_key == k & !is.na(gold$metric), ]; g[which.max(g$date), ] }
+```
+
+```{r headline}
+d <- drought[!is.na(drought$score), ]
+now <- d[nrow(d), ]
+```
+
+**As of `r format(now$date, "%B %d, %Y")`:** Local Drought Score **`r round(now$score, 1)`** (`r ifelse(now$category == "None", "no drought", now$category)`), from `r now$n_components` of 4 components. Official USDM DSCI for Multnomah, Clackamas and Washington counties averages **`r round(now$usdm_dsci)`** on a 0 to 500 scale.
+
+## Scorecard
+
+```{r scorecard}
+rows <- lapply(stations$station_key[stations$enabled == "TRUE" & stations$source %in% c("usgs", "nrcs", "manual")], function(k) {
+  x <- latest(k)
+  if (!nrow(x)) return(NULL)
+  data.frame(Indicator = lab(k), Date = format(x$date, "%b %d"),
+             Value = formatC(x$metric, format = "f", digits = 1, big.mark = ","),
+             Unit = stations$unit[stations$station_key == k],
+             `Percentile` = ifelse(is.na(x$pct), "", round(x$pct)),
+             `% of median` = ifelse(is.na(x$pct_of_median), "", paste0(round(x$pct_of_median), "%")),
+             check.names = FALSE)
+})
+knitr::kable(do.call(rbind, rows), align = "lllrrr")
+```
+
+Flow values are 28-day means; precipitation values are trailing 182-day totals with an SPI-style percentile.
+
+## Drought score this water year vs. stress years
+
+```{r drought-overlay, fig.height=3.6}
+d$wy <- water_year(d$date); d$doy <- day_of_wy(d$date)
+od <- d[d$wy %in% c(cur_wy, settings$stress_years), ]
+od$series <- ifelse(od$wy == cur_wy, paste0("WY", cur_wy), as.character(od$wy))
+od$score7 <- ave(od$score, od$wy, FUN = function(x) as.numeric(stats::filter(x, rep(1/7, 7), sides = 1)))
+bands <- data.frame(ymin = c(0, 2, 5, 10, 20), ymax = c(2, 5, 10, 20, 30),
+                    cat = c("", "D3-D4", "D2", "D1", "D0"),
+                    alpha = c(0.40, 0.32, 0.24, 0.16, 0.08))
+bands$ylab <- c(NA, 3, 7.5, 15, 25)
+od$series <- factor(od$series, levels = series_levels)
+ggplot(od, aes(doy, score7, colour = series)) +
+  geom_rect(data = bands, aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, alpha = I(alpha)),
+            inherit.aes = FALSE, fill = "#eb6834") +
+  geom_text(data = bands[-1, ], aes(x = 362, y = ylab, label = cat), inherit.aes = FALSE,
+            size = 2.8, colour = ink2, hjust = 1) +
+  geom_line(linewidth = 0.7) +
+  scale_colour_manual(values = cols, name = NULL) + wy_axis +
+  scale_y_continuous(limits = c(0, 100), breaks = c(0, 10, 20, 30, 50, 100)) +
+  labs(x = NULL, y = "Score (percentile, 7-day mean)") + theme_tw
+```
+
+## Snowpack (SWE) vs. normal
+
+```{r swe, fig.height=3.4}
+overlay <- function(keys, logy = FALSE, ylab = "") {
+  g <- gold[gold$station_key %in% keys & gold$wy %in% c(cur_wy, settings$stress_years), ]
+  g$series <- ifelse(g$wy == cur_wy, paste0("WY", cur_wy), as.character(g$wy))
+  g$label <- lab(g$station_key)
+  g$series <- factor(g$series, levels = series_levels)
+  n <- normals[normals$station_key %in% keys, ]; n$label <- lab(n$station_key)
+  p <- ggplot() +
+    geom_ribbon(data = n, aes(doy, ymin = p10, ymax = p90), fill = "#e6e5e0") +
+    geom_line(data = n, aes(doy, p50), colour = ink2, linetype = "dashed", linewidth = 0.4) +
+    geom_line(data = g, aes(doy, metric, colour = series), linewidth = 0.6) +
+    facet_wrap(~label, scales = "free_y", ncol = 2) +
+    scale_colour_manual(values = cols, name = NULL) + wy_axis_q +
+    labs(x = NULL, y = ylab, caption = "Band: 10th to 90th percentile, 1991-2020. Dashed: median.") + theme_tw
+  if (logy) p <- p + scale_y_log10(labels = scales::comma)
+  p
+}
+overlay(stations$station_key[stations$role == "score_swe"], ylab = "SWE (in)")
+```
+
+## Rivers (28-day mean flow for scored streams, daily flow for others)
+
+```{r flows, fig.height=8}
+overlay(stations$station_key[stations$source == "usgs" & stations$parameter == "00060" & stations$enabled == "TRUE"],
+        logy = TRUE, ylab = "Flow (cfs)")
+```
+
+## Data status
+
+```{r status}
+status$last_date <- format(as.Date(status$last_date), "%Y-%m-%d")
+status$error[is.na(status$error)] <- ""
+knitr::kable(status, col.names = c("Station", "Rows pulled", "Latest date", "Error"))
+```
