@@ -8,7 +8,8 @@ A personal pipeline that runs every morning on GitHub Actions. It pulls rivers, 
 2. **Silver** (`R/silver.R`): one long table, `station_key, date, value, unit, approval`.
 3. **Gold** (`R/indicators.R`): day-of-water-year percentiles and normals, 28-day flow means, 182-day SPI-style precipitation percentiles.
 4. **Drought score** (`R/drought.R`): weighted blend of precip (30%), flow (30%), Bull Run storage (25%) and snowpack (15%, Nov to Jun only), mapped to USDM D0 to D4 cutoffs. Missing components drop out and their weight is redistributed. At least 2 components are required.
-5. **Alerts** (`R/alerts.R`): drought category D1 or worse, Mt. Hood SWE under 50% of median (Feb to Jun), a scored stream under its 10th percentile, or any station gone stale for 10 days. Only *new* alerts open an issue.
+5. **Recent conditions** (`R/outlook.R`): 7-day, 30-day and water-year-to-date precipitation and snowpack (level and recent change), each ranked against the same dates in 1991-2020, plus how many points each component moved the drought score over the last 7 and 30 days. The dashboard turns this into a short plain-language summary.
+6. **Alerts** (`R/alerts.R`): drought category D1 or worse, Mt. Hood SWE under 50% of median (Feb to Jun), a scored stream under its 10th percentile, or any station gone stale for 10 days. Only *new* alerts open an issue.
 
 Data persists on a `data` branch that is force-pushed each run as a single commit, so the repo does not grow.
 

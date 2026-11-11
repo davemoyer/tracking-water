@@ -21,8 +21,9 @@ fake <- function(key, src) {
   st <- stations[stations$station_key == key, ]
   v <- switch(st$role,
     score_precip = pmax(0, rgamma(length(dates), 0.6, 2) * (1.2 + season) * dry),
-    score_swe    = pmax(0, 60 * dry * sin(pi * pmin(pmax(doy - 45, 0), 230) / 230)) + rnorm(length(dates), 0, 1),
+    score_swe    = pmax(0, 60 * dry * sin(pi * pmin(pmax(doy - 45, 0), 230) / 230)) + rnorm(length(dates), 0, 4),
     score_flow   = exp(log(800) + 1.2 * season + log(dry) + rnorm(length(dates), 0, 0.25)),
+    score_storage = 1000 + 50 * dry * (1 + 0.3 * season) + rnorm(length(dates), 0, 4),
     overlay      = exp(log(20000) + 1.0 * season + 0.8 * log(dry) + rnorm(length(dates), 0, 0.2)),
     usdm         = NA)
   if (st$role == "score_swe") v <- pmax(v, 0)
@@ -44,6 +45,9 @@ status$last_date[status$station_key == "usgs_fanno_durham"] <- today - 30   # fo
 t0 <- Sys.time()
 gold <- build_gold(silver, stations)
 drought <- build_drought_score(gold$daily, gold$normals, stations)
+recent <- recent_conditions(gold$daily, stations)
+attr_tbl <- score_attribution(drought)
+band <- wytd_band(gold$daily, stations)
 active <- evaluate_alerts(gold$daily, drought, stations, status, today)
 cat("gold built in", round(difftime(Sys.time(), t0, units = "secs"), 1), "s\n")
 
@@ -51,6 +55,9 @@ readr::write_csv(gold$daily, file.path(data_dir, "gold_daily.csv.gz"))
 readr::write_csv(gold$normals, file.path(data_dir, "normals.csv.gz"))
 readr::write_csv(drought, file.path(data_dir, "drought_score.csv"))
 readr::write_csv(status, file.path(data_dir, "status.csv"))
+readr::write_csv(recent, file.path(data_dir, "recent_conditions.csv"))
+readr::write_csv(attr_tbl, file.path(data_dir, "score_attribution.csv"))
+readr::write_csv(band, file.path(data_dir, "precip_wytd.csv"))
 
 # Checks
 late_summer <- function(y) {
@@ -62,6 +69,17 @@ cat("median late-summer score: 2015 =", late_summer(2015), " 2021 =", late_summe
 stopifnot(late_summer(2015) < 10, late_summer(2021) < 10, late_summer(2018) > 20)
 stopifnot(all(drought$score >= 0 & drought$score <= 100, na.rm = TRUE))
 print(tail(drought, 3))
+print(recent)
+print(attr_tbl)
+writeLines(describe_recent(recent, attr_tbl, drought))
+# attribution must reconcile with the actual score change
+d <- drought[!is.na(drought$score), ]
+for (n in settings$recent_windows) {
+  past <- d$score[max(which(d$date <= max(d$date) - n))]
+  stopifnot(abs(sum(attr_tbl[[paste0("points_change_", n, "d")]]) - (d$score[nrow(d)] - past)) < 1e-6)
+}
+stopifnot(all(c("7d", "30d", "wytd") %in% recent$window[recent$kind == "precip"]),
+          all(band$p10 <= band$p50 & band$p50 <= band$p90))
 print(active)
 stopifnot("stale_usgs_fanno_durham" %in% active$key)
 cat("ALL CHECKS PASSED\n")
