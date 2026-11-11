@@ -8,13 +8,12 @@ settings <- list(
   min_ref_years    = 10,                     # fewer years than this -> no percentile
   flow_roll_days   = 28,
   spi_window_days  = 182,                    # ~6-month SPI-style window
+  recent_windows   = c(7, 30),               # days summarised in the recent rain/snow section
 
   # Local Drought Score weights; snowpack drops out Jul-Oct and its weight is redistributed
   weights = c(precip = 0.30, flow = 0.30, storage = 0.25, swe = 0.15),
   swe_months = c(11, 12, 1, 2, 3, 4, 5, 6),
 
   # USDM percentile cutoffs (upper bound of each class)
-  usdm_breaks = c(D4 = 2, D3 = 5, D2 = 10, D1 = 20, D0 = 30),
-
-  stress_years = c(2015, 2021)
+  usdm_breaks = c(D4 = 2, D3 = 5, D2 = 10, D1 = 20, D0 = 30)
 )

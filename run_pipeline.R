@@ -1,4 +1,5 @@
-# Daily entry point: refresh silver, rebuild gold, score drought, evaluate alerts.
+# Daily entry point: refresh silver, rebuild gold, score drought, summarise recent
+# conditions, evaluate alerts.
 #   Rscript run_pipeline.R
 # DATA_DIR (default "data-store") holds persistent outputs between runs.
 
@@ -30,7 +31,15 @@ readr::write_csv(drought, file.path(data_dir, "drought_score.csv"))
 last <- tail(drought[!is.na(drought$score), ], 1)
 if (nrow(last)) log_msg("drought score ", round(last$score, 1), " (", last$category, ") on ", last$date)
 
-# 4. Alerts: write new ones for the workflow to post as issues
+# 4. Recent rain/snow vs. normal and what moved the score
+recent <- recent_conditions(gold$daily, stations)
+if (!is.null(recent)) readr::write_csv(recent, file.path(data_dir, "recent_conditions.csv"))
+attr_tbl <- score_attribution(drought)
+if (!is.null(attr_tbl)) readr::write_csv(attr_tbl, file.path(data_dir, "score_attribution.csv"))
+band <- wytd_band(gold$daily, stations)
+if (!is.null(band)) readr::write_csv(band, file.path(data_dir, "precip_wytd.csv"))
+
+# 5. Alerts: write new ones for the workflow to post as issues
 active <- evaluate_alerts(gold$daily, drought, stations, res$status, today)
 state_path <- file.path(data_dir, "alerts_state.csv")
 d <- diff_alerts(active, state_path)
