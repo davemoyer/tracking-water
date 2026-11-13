@@ -1,0 +1,6 @@
+key,message
+drought_D1,Local Drought Score is 11.4 (D1) as of 2026-11-12.
+flow_low_usgs_sandy_marmot,Sandy near Marmot 28-day flow is at the 2th percentile (2026-11-12).
+stale_usgs_columbia_bonneville,No data newer than 10 days for usgs_columbia_bonneville. Check the station or API.
+stale_usgs_bullrun_res1,No data newer than 10 days for usgs_bullrun_res1. Check the station or API.
+stale_usgs_bullrun_res2,No data newer than 10 days for usgs_bullrun_res2. Check the station or API.
